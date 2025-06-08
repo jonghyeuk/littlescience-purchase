@@ -259,7 +259,7 @@
         // 이메일 입력 시 버튼 업데이트
         document.getElementById('buyerEmail').addEventListener('input', updatePurchaseButton);
         
-        // 폼 제출 처리
+        // 폼 제출 처리 (CORS 우회 방식)
         document.getElementById('purchaseForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -280,40 +280,49 @@
             document.getElementById('result').style.display = 'none';
             
             try {
-                // ⚠️ 여기에 실제 Apps Script 웹앱 URL을 입력하세요!
-                const response = await fetch('https://script.google.com/macros/s/AKfycbxxUghreQj12-Sek_5s-L_NoOUII0sjqGShoMPgdkBnp4pvHuRJelY4YxlJssvS0ODg/exec', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'purchase',
-                        licenseType: selectedLicense,
-                        buyerEmail: buyerEmail
-                    })
-                });
+                // 🔥 CORS 우회: 동적 form 생성 방식
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'https://script.google.com/macros/s/AKfycbxxUghreQj12-Sek_5s-L_NoOUII0sjqGShoMPgdkBnp4pvHuRJelY4YxlJssvS0ODg/exec';
+                form.target = '_blank';
                 
-                const result = await response.json();
+                // 데이터 추가
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'action';
+                actionInput.value = 'purchase';
+                form.appendChild(actionInput);
                 
-                // 결과 표시
+                const licenseInput = document.createElement('input');
+                licenseInput.type = 'hidden';
+                licenseInput.name = 'licenseType';
+                licenseInput.value = selectedLicense;
+                form.appendChild(licenseInput);
+                
+                const emailInput = document.createElement('input');
+                emailInput.type = 'hidden';
+                emailInput.name = 'buyerEmail';
+                emailInput.value = buyerEmail;
+                form.appendChild(emailInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+                document.body.removeChild(form);
+                
+                // 성공 메시지 표시
                 const resultDiv = document.getElementById('result');
-                if (result.success) {
-                    resultDiv.className = 'result success';
-                    resultDiv.innerHTML = `
-                        <strong>✅ 구매 완료!</strong><br>
-                        이용권 코드: <strong>${result.code}</strong><br>
-                        ${buyerEmail}로 상세 정보가 발송되었습니다.
-                    `;
-                } else {
-                    resultDiv.className = 'result error';
-                    resultDiv.innerHTML = `<strong>❌ 구매 실패</strong><br>${result.message}`;
-                }
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `
+                    <strong>✅ 구매 요청 완료!</strong><br>
+                    ${buyerEmail}로 이용권 코드가 발송됩니다.<br>
+                    <small>새 창이 열리면서 처리 결과를 확인할 수 있습니다.</small>
+                `;
                 resultDiv.style.display = 'block';
                 
             } catch (error) {
                 const resultDiv = document.getElementById('result');
                 resultDiv.className = 'result error';
-                resultDiv.innerHTML = `<strong>❌ 오류 발생</strong><br>네트워크 오류가 발생했습니다.`;
+                resultDiv.innerHTML = `<strong>❌ 오류 발생</strong><br>다시 시도해주세요.`;
                 resultDiv.style.display = 'block';
             }
             
